@@ -1,0 +1,6 @@
+- [x] Strukturë bazë e projektit u krijua (backend + frontend)
+- [ ] Shtimi i modeleve dhe API-ve për punëtorët, orët, pagat, avancat
+- [ ] Shtimi i paneleve UI për regjistrim, editim, fshirje, kërkim
+- [ ] Shtimi i raporteve të përgjithshme dhe individuale
+- [ ] Shtimi i pamjes për printim
+- [ ] Testimi dhe përmirësimi i UI/UX mobile friendly

@@ -1,0 +1,348 @@
+/* === ENISI-MS MODERN DESIGN SYSTEM === */
+
+/* 1. ROOT VARIABLES & GLOBAL STYLES */
+/* =================================== */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-primary: 'Poppins', sans-serif;
+  
+  --color-primary: #2563eb; /* Blue 600 */
+  --color-primary-hover: #1d4ed8; /* Blue 700 */
+  
+  --color-secondary: #059669; /* Green 600 */
+  --color-secondary-hover: #047857; /* Green 700 */
+
+  --color-danger: #dc2626; /* Red 600 */
+  --color-danger-hover: #b91c1c; /* Red 700 */
+
+  --color-text-dark: #1f2937; /* Gray 800 */
+  --color-text-light: #4b5563; /* Gray 600 */
+  --color-text-white: #ffffff;
+
+  --color-bg-light: #f3f4f6; /* Gray 100 */
+  --color-bg-white: #ffffff;
+  --color-border: #d1d5db; /* Gray 300 */
+  --color-header-bg: #111827; /* Gray 900 */
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  
+  --border-radius: 0.75rem; /* 12px */
+  --transition: all 0.2s ease-in-out;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-primary);
+  background-color: var(--color-bg-light);
+  color: var(--color-text-dark);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* 2. LAYOUT & HEADER */
+/* =================================== */
+header {
+  background-color: var(--color-header-bg);
+  color: var(--color-text-white);
+  padding: 1rem 1.5rem;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+main {
+  padding: 2rem 1.5rem;
+  min-height: 85vh;
+}
+
+/* 3. CORE COMPONENTS (Buttons, Forms, Tables, Panels) */
+/* ================================================== */
+
+/* --- Panels (Cards) --- */
+.panel {
+  background: var(--color-bg-white);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  padding: 2rem;
+  max-width: 800px;
+  margin: 1rem auto;
+  transition: var(--transition);
+}
+.panel:hover {
+  box-shadow: var(--shadow-lg);
+}
+.panel-title {
+  text-align: center;
+  color: var(--color-text-dark);
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+/* --- Forms & Inputs --- */
+.form-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+  flex: 1 1 140px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.45rem;
+  font-size: 0.85rem;
+  font-family: var(--font-primary);
+  background-color: var(--color-bg-light);
+  transition: var(--transition);
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+.search-input {
+  display: block;
+  width: 100%;
+  max-width: 350px;
+  margin: 0 auto 2rem auto;
+}
+
+/* --- Buttons --- */
+.btn {
+  border: none;
+  padding: 0.55rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: var(--font-primary);
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-white);
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+}
+.btn-secondary {
+  background-color: var(--color-secondary);
+  color: var(--color-text-white);
+}
+.btn-secondary:hover {
+  background-color: var(--color-secondary-hover);
+}
+.btn-danger {
+  background-color: var(--color-danger);
+  color: var(--color-text-white);
+}
+.btn-danger:hover {
+  background-color: var(--color-danger-hover);
+}
+.btn-edit {
+  background: #f59e0b;
+  color: var(--color-text-white);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+}
+.btn-edit:hover {
+  background: #d97706;
+}
+.btn-cancel {
+  background-color: var(--color-text-light);
+  color: var(--color-text-white);
+}
+.btn-cancel:hover {
+  background-color: var(--color-text-dark);
+}
+
+/* --- Tables --- */
+.table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.8rem;
+}
+.table th, .table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.table th {
+  background: var(--color-bg-light);
+  font-weight: 500;
+  color: var(--color-text-light);
+  text-transform: none;
+  letter-spacing: 0.25px;
+  font-size: 0.75rem;
+}
+.table tr {
+  transition: var(--transition);
+}
+.table tbody tr:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 5%, transparent);
+}
+.table td:last-child {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* 4. COMPONENT-SPECIFIC STYLES & OVERRIDES */
+/* ========================================== */
+
+/* Use existing classes to apply new styles */
+.sector-form, .wp-form, .wh-form, .pay-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+.sector-title, .wp-title, .wh-title, .pay-title, .report-title, .indiv-title {
+  text-align: center;
+  color: var(--color-text-dark);
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+.sector-btn-main, .wp-btn-main, .wh-btn-main, .pay-btn-main, .report-btn-main, .indiv-btn-main {
+  background-color: var(--color-primary);
+  color: var(--color-text-white);
+  border: none;
+  padding: 0.55rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.wp-btn-delete, .sector-btn-delete, .wh-btn-delete, .pay-btn-delete {
+  background-color: var(--color-danger);
+  color: white;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.7rem;
+  border: none;
+  border-radius: 0.45rem;
+  cursor:pointer;
+}
+
+/* Search input styling */
+.wp-search, .wh-search, .pay-search, .report-search {
+  display: block;
+  width: 100%;
+  max-width: 350px;
+  margin: 0 auto 2rem auto;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+}
+
+/* Toast Notification */
+.sector-toast, .wp-toast, .wh-toast, .pay-toast, .report-toast, .indiv-toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-secondary);
+  color: var(--color-text-white);
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-lg);
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 9999;
+}
+
+/* 5. RESPONSIVENESS & MEDIA QUERIES */
+/* ==================================== */
+
+@media (max-width: 768px) {
+  main {
+    padding: 1.5rem 1rem;
+  }
+  .panel {
+    padding: 1.5rem;
+  }
+  .panel-title {
+    font-size: 1.5rem;
+  }
+  header h1 {
+    font-size: 1.2rem;
+  }
+  .form-container, .sector-form, .wp-form, .wh-form, .pay-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .table {
+    font-size: 0.9rem;
+  }
+  .table th, .table td {
+    padding: 0.75rem;
+  }
+}
+
+/* 6. PRINT STYLES */
+/* ==================================== */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 10pt;
+  }
+  header, nav, button, input, select, .report-controls, .indiv-controls {
+    display: none !important;
+  }
+  main, .panel {
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+  }
+  .user-badge { display:block !important; position:fixed; top:8px; right:8px; margin:0 !important; }
+  .user-badge div { background:#fff !important; color:#000 !important; box-shadow:none !important; border:1px solid #000; }
+  .table {
+    width: 100%;
+    border: 1px solid #000;
+    font-size: 9pt;
+  }
+  .table th, .table td {
+    border: 1px solid #000;
+    color: #000;
+    background: #fff;
+    padding: 0.3rem;
+  }
+}
