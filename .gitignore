@@ -10,21 +10,30 @@ yarn-error.log*
 logs/
 *.log
 
-# Environment files
+# Environment files (never commit real secrets)
 .env
 backend/.env
 frontend/.env
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+*.local
+*.env.backup
 
 # Build outputs
 frontend/build/
 backend/dist/
+backend/tmp/
+backend/.cache/
+frontend/.cache/
 coverage/
 
-# SQLite database
+# Legacy local sqlite remnants
 backend/database.db
 backend/database.sqlite
 *.sqlite
 *.sqlite-journal
+*.db
 
 # OS / editor
 .DS_Store
@@ -35,5 +44,7 @@ Thumbs.db
 *.tgz
 
 # Misc
-package-lock.json
-# (you can remove the above line if you want to commit lockfiles)
+# Keep lockfiles for reproducible builds (remove ignore)
+# session store / dumps
+dump.sql
+*.dump
