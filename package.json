@@ -1,0 +1,13 @@
+{
+  "name": "enisi-root",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "prepare-frontend": "npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "npm run prepare-frontend && node backend/index.js",
+    "build": "npm run prepare-frontend"
+  }
+}

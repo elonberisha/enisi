@@ -14,7 +14,7 @@ Ky sistem mundëson:
 - Autentikim me fjalëkalim, Google OAuth dhe Passkeys (WebAuthn)
 
 ## Strukturë
-- **backend/** Node.js + Express + SQLite
+- **backend/** Node.js + Express + PostgreSQL
 - **frontend/** React (mobile friendly)
 
 ## Si të startoni projektin
@@ -31,6 +31,8 @@ Ky sistem mundëson:
 
 Backend default port: 4000
 Frontend default port: 3000
+
+Kërkon `DATABASE_URL` aktiv për backend (pa të nuk starton).
 
 ## Passkeys (WebAuthn)
 1. Hyni me llogarinë ekzistuese (username/password ose Google).
@@ -76,7 +78,19 @@ Kur humbet lidhja shfaqet banner dhe gabimet e rrjetit japin njoftim të veçant
 - Aktivizo `userVerification: 'required'` pasi të verifikohet pajtueshmëria me pajisjet target.
 - Shto rate-limiting për rrugët e autentikimit.
 
-## Development Notes
-- Databaza SQLite krijohet automatikisht (`database.db`).
-- Migrimet bazë kryhen në start nëse kolonat mungojnë.
+## Databaza (PostgreSQL)
+Tani përdoret vetëm PostgreSQL (SQLite është hequr).
+
+Krijo një database dhe vendos variablën e mjedisit:
+```
+DATABASE_URL=postgres://user:password@host:5432/dbname
+```
+Shembull Railway (env i gatshëm) – thjesht kopjo connection string dhe vendose si `DATABASE_URL`.
+
+Schema krijohet automatikisht në start nëse nuk ekziston.
+
+Nëse kishe të dhëna test në SQLite, ato nuk migrohen (u kërkua fillim i pastër). Nëse më vonë të duhet migrim i vërtetë, mund të shtohet skript eksport/import.
+
+## Heqja e SQLite
+Varësitë `sqlite` dhe `sqlite3` janë hequr. Përdor vetëm Postgres. Sigurohu që `.env` ka `DATABASE_URL` përpara start.
 

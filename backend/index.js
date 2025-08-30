@@ -1,31 +1,38 @@
 
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
-dotenv.config();
-import express from 'express';
-import path from 'path';
 import { fileURLToPath } from 'url';
+import path from 'path';
+// Load backend/.env explicitly (works no matter the working directory)
+try {
+  const __filename_env = fileURLToPath(import.meta.url);
+  const __dirname_env = path.dirname(__filename_env);
+  dotenv.config({ path: path.join(__dirname_env, '.env') });
+} catch {
+  dotenv.config(); // fallback
+}
+import express from 'express';
+// (path & fileURLToPath already imported above for env loading)
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+// DB abstraction (SQLite or Postgres)
+import { initDb, getDb } from './db.js';
 import bcrypt from 'bcrypt';
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 import base64url from 'base64url';
 
 const app = express();
+// Trust first proxy (needed for secure cookies & correct IP behind Render/NGINX)
+app.set('trust proxy', 1);
 // Resolve dirname for ESM (used for serving frontend build in production)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Allow origins (env CORS_ORIGINS=comma separated) else defaults
+// Allowed origins (strict: must be provided via CORS_ORIGINS env in production)
 const allowedOrigins = new Set(
-  (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
-  ]).map(o=>o.trim()).filter(Boolean)
+  (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []).map(o=>o.trim()).filter(Boolean)
 );
 app.use(cors({
   origin: (origin, cb) => {
@@ -61,7 +68,7 @@ app.use((req,res,next)=>{ res.set('X-App-Version','dbg-payments-exists-v2'); nex
 
 // Health endpoint early (checks basic server & db availability)
 app.get('/api/health', (req,res)=>{
-  res.json({ status:'ok', db: !!db });
+  res.json({ status:'ok', db: !!(db) });
 });
 
 passport.serializeUser((user, done) => {
@@ -93,99 +100,11 @@ passport.use(new GoogleStrategy({
 }));
 
 let db;
- (async () => {
+(async () => {
   try {
-    db = await open({
-      filename: './database.db',
-      driver: sqlite3.Database
-    });
-    console.log('SQLite connected');
-  try { await db.exec('PRAGMA foreign_keys = ON'); } catch(_){}
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS sectors (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
-    );
-    CREATE TABLE IF NOT EXISTS workers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      first_name TEXT,
-      last_name TEXT,
-      position TEXT,
-      hourly_rate REAL,
-      sector_id INTEGER,
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY(sector_id) REFERENCES sectors(id)
-    );
-    CREATE TABLE IF NOT EXISTS work_hours (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      worker_id INTEGER,
-      date TEXT,
-      hours REAL,
-      FOREIGN KEY(worker_id) REFERENCES workers(id)
-    );
-    CREATE TABLE IF NOT EXISTS payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      worker_id INTEGER,
-      date TEXT,
-      amount REAL,
-      type TEXT,
-      FOREIGN KEY(worker_id) REFERENCES workers(id)
-    );
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS webauthn_credentials (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      credential_id TEXT NOT NULL UNIQUE,
-      public_key TEXT NOT NULL,
-      counter INTEGER DEFAULT 0,
-      transports TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY(user_id) REFERENCES users(id)
-    );
-  `);
-  // Schema migrations for user management (ignore errors if already applied)
-  try { await db.exec("ALTER TABLE users ADD COLUMN approved INTEGER DEFAULT 1"); } catch(_){ }
-  try { await db.exec("ALTER TABLE users ADD COLUMN provider TEXT"); } catch(_){ }
-  try { await db.exec("ALTER TABLE users ADD COLUMN display_name TEXT"); } catch(_){ }
-  try { await db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'"); } catch(_){ }
-  try { await db.exec("ALTER TABLE users ADD COLUMN created_at TEXT"); } catch(_){ }
-  try { await db.exec("ALTER TABLE users ADD COLUMN updated_at TEXT"); } catch(_){ }
-  try { await db.exec("ALTER TABLE users ADD COLUMN created_ip TEXT"); } catch(_){ }
-  try { await db.exec("ALTER TABLE users ADD COLUMN last_login_ip TEXT"); } catch(_){ }
-  // creator tracking columns
-  try { await db.exec("ALTER TABLE sectors ADD COLUMN created_by TEXT"); } catch(_){ }
-  try { await db.exec("ALTER TABLE workers ADD COLUMN created_by TEXT"); } catch(_){ }
-  try { await db.exec("ALTER TABLE work_hours ADD COLUMN created_by TEXT"); } catch(_){ }
-  try { await db.exec("ALTER TABLE payments ADD COLUMN created_by TEXT"); } catch(_){ }
-  // unique constraint for worker identity per sector
-  try { await db.exec("CREATE UNIQUE INDEX IF NOT EXISTS uniq_worker_name_sector ON workers(first_name, last_name, sector_id)"); } catch(_){ }
-  // audit logs table
-  try { await db.exec(`CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity TEXT,
-    entity_id INTEGER,
-    action TEXT,
-    username TEXT,
-    info TEXT,
-    ts TEXT DEFAULT (datetime('now'))
-  )`);} catch(_){ }
-  await db.run('UPDATE users SET approved=1 WHERE approved IS NULL');
-  await db.run("UPDATE users SET role='admin' WHERE username='admin'");
-  await db.run("UPDATE users SET created_at = COALESCE(created_at, datetime('now')), updated_at = COALESCE(updated_at, datetime('now'))");
-  // Insert default admin user if not exists (hashed password)
-  const user = await db.get('SELECT * FROM users WHERE username = ?', ['admin']);
-  if (!user) {
-    const hash = await bcrypt.hash('admin', 10);
-    await db.run("INSERT INTO users (username, password, approved, role, created_at, updated_at, provider) VALUES (?, ?, 1, 'admin', datetime('now'), datetime('now'), 'local')", ['admin', hash]);
-  }
-  // Migration: add name column to webauthn_credentials if missing
-  try { await db.exec("ALTER TABLE webauthn_credentials ADD COLUMN name TEXT"); } catch(_){}
-
-  // Simple login endpoint (basic rate limit memory bucket per IP)
+    await initDb();
+    db = getDb();
+    // Simple login endpoint (basic rate limit memory bucket per IP)
   const loginBuckets = new Map();
   // periodic cleanup to prevent unbounded growth
   setInterval(()=>{
@@ -271,7 +190,7 @@ let db;
   await logAudit('user', result.lastID, 'register', username, null);
   res.json({ success: true, pending: true });
     } catch (err) {
-      if (err.code === 'SQLITE_CONSTRAINT') {
+  if (err.code === 'SQLITE_CONSTRAINT' || err.code === '23505') { // 23505 Postgres unique
         res.status(409).json({ error: 'Username already exists' });
       } else {
         res.status(500).json({ error: 'Registration failed' });
@@ -560,20 +479,8 @@ app.get('/api/me', async (req, res) => {
   return res.status(403).json({ pending: user.approved === 0, rejected: user.approved === -1 });
 });
 
-// Debug endpoint (can be removed later) to inspect session/user
-app.get('/api/session-info', (req, res) => {
-  res.json({ sessionUser: req.session?.user || null, passportUser: req.user || null });
-});
+// Logout (kept) - removed debug-only endpoints for production hardening
 app.post('/api/logout', (req, res) => { const u=req.session?.user; req.session.destroy(async ()=> { if(u){ try{ await logAudit('auth', u.id, 'logout', u.username, null); } catch{} } res.json({ success:true }); }); });
-// Debug auth state
-app.get('/api/debug/auth', (req,res)=>{
-  res.json({
-    sessionUser: req.session?.user || null,
-    passportUser: req.user || null,
-    hasSessionCookie: !!req.headers.cookie,
-    origin: req.headers.origin || null
-  });
-});
 
 // Admin user management routes
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
@@ -631,24 +538,39 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
 
 // API për punëtorët
 app.post('/api/workers', requireAuth, async (req, res) => {
+  console.log('[POST /api/workers] raw body=', req.body);
   let { first_name, last_name, position, hourly_rate, sector_id } = req.body;
   first_name = (first_name||'').trim();
   last_name = (last_name||'').trim();
   const sectorIdInt = sector_id ? parseInt(sector_id,10) : null;
+  // Normalizo cmimin (lejo "12,5" -> 12.5)
+  if (typeof hourly_rate === 'string') hourly_rate = hourly_rate.replace(',', '.').trim();
+  hourly_rate = parseFloat(hourly_rate);
   if (!first_name) return res.status(400).json({ error: 'Emri kërkohet' });
-  if (!hourly_rate) return res.status(400).json({ error: 'Çmimi i orës kërkohet' });
+  if (!hourly_rate || isNaN(hourly_rate)) return res.status(400).json({ error: 'Çmimi i orës kërkohet' });
   try {
-    // Check existing (case-insensitive) same sector
-  const existing = await db.get("SELECT id FROM workers WHERE LOWER(first_name)=LOWER(?) AND LOWER(COALESCE(last_name,''))=LOWER(?) AND ((? IS NULL AND sector_id IS NULL) OR sector_id = ?)", [first_name, last_name || '', sectorIdInt, sectorIdInt]);
+    if (sectorIdInt !== null) {
+      const sectorRow = await db.get('SELECT id FROM sectors WHERE id=?', [sectorIdInt]);
+      if (!sectorRow) return res.status(400).json({ error: 'Sektori nuk ekziston' });
+    }
+    // Check existing (case-insensitive) same sector (dynamic to avoid PG param type ambiguity 42P18)
+    let existing;
+    if (sectorIdInt == null) {
+      existing = await db.get("SELECT id FROM workers WHERE LOWER(first_name)=LOWER(?) AND LOWER(COALESCE(last_name,''))=LOWER(?) AND sector_id IS NULL", [first_name, last_name || '']);
+    } else {
+      existing = await db.get("SELECT id FROM workers WHERE LOWER(first_name)=LOWER(?) AND LOWER(COALESCE(last_name,''))=LOWER(?) AND sector_id = ?", [first_name, last_name || '', sectorIdInt]);
+    }
     if (existing) return res.status(409).json({ error: 'Punëtori me këtë emër dhe sektor ekziston' });
     const createdBy = currentUsername(req);
-  const result = await db.run('INSERT INTO workers (first_name, last_name, position, hourly_rate, sector_id, created_by) VALUES (?,?,?,?,?,?)', [first_name, last_name||null, position||null, hourly_rate, sectorIdInt, createdBy]);
-  await logAudit('worker', result.lastID, 'create', createdBy, `name=${first_name} ${last_name}|rate=${hourly_rate}|sector=${sectorIdInt}`);
-    res.json({ id: result.lastID });
+    const result = await db.run('INSERT INTO workers (first_name, last_name, position, hourly_rate, sector_id, created_by) VALUES (?,?,?,?,?,?)', [first_name, last_name||null, position||null, hourly_rate, sectorIdInt, createdBy]);
+    const inserted = await db.get('SELECT w.*, s.name as sector_name FROM workers w LEFT JOIN sectors s ON w.sector_id = s.id WHERE w.id=?', [result.lastID]);
+    await logAudit('worker', result.lastID, 'create', createdBy, `name=${first_name} ${last_name}|rate=${hourly_rate}|sector=${sectorIdInt}`);
+    res.json({ id: result.lastID, worker: inserted });
   } catch(e){
     logDbError('insertWorker', e);
-    if (e.code === 'SQLITE_CONSTRAINT') return res.status(409).json({ error: 'Punëtori me këtë emër dhe sektor ekziston' });
-    res.status(500).json({ error: 'Gabim gjatë ruajtjes' });
+  if (e.code === 'SQLITE_CONSTRAINT' || e.code === '23505') return res.status(409).json({ error: 'Punëtori me këtë emër dhe sektor ekziston' });
+  console.error('[WORKER INSERT FAIL]', { first_name, last_name, hourly_rate, sectorIdInt, message: e.message, code: e.code, stack: e.stack });
+  res.status(500).json({ error: 'Gabim gjatë ruajtjes', detail: e.message, code:e.code });
   }
 });
 
@@ -671,7 +593,8 @@ app.post('/api/sectors', requireAuth, async (req, res) => {
     res.json({ id: result.lastID });
   } catch (err) {
   logDbError('insertSector', err);
-  res.status(400).json({ error: 'Sektori ekziston!' });
+  if (err.code === 'SQLITE_CONSTRAINT' || err.code === '23505') return res.status(409).json({ error: 'Sektori ekziston!' });
+  res.status(500).json({ error: 'Gabim gjatë ruajtjes' });
   }
 });
 
@@ -973,4 +896,11 @@ app.post('/api/test/bulk-insert', async (req, res) => {
     await db.run('DELETE FROM workers');
     await db.run('DELETE FROM sectors');
     res.json({ success: true, message: 'All test data deleted.' });
+  });
+
+  // Global error handler (last)
+  app.use((err, req, res, next)=>{
+    console.error('[UNHANDLED ERROR]', err && err.stack || err);
+    if (res.headersSent) return next(err);
+    res.status(500).json({ error: 'Internal Server Error', detail: process.env.DEBUG_ERRORS==='1' ? (err.message||String(err)) : undefined, code: err.code });
   });
