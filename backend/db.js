@@ -169,3 +169,10 @@ export async function initDb() {
 }
 
 export function getDb() { return dbInstance; }
+
+// Funksion ndihmës për të gjeneruar hash të fjalëkalimit (tani jashtë ensureSchema)
+export async function gjeneroHash(password) {
+  const saltRounds = 10;
+  return await bcrypt.hash(password, saltRounds);
+}
+
