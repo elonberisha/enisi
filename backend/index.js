@@ -19,7 +19,7 @@ import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 // DB abstraction (SQLite or Postgres)
-import { initDb, getDb } from './db.js';
+import { initDb, getDb } from './db.cjs';
 import bcrypt from 'bcrypt';
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 import base64url from 'base64url';
