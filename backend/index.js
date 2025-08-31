@@ -904,3 +904,8 @@ app.post('/api/test/bulk-insert', async (req, res) => {
     if (res.headersSent) return next(err);
     res.status(500).json({ error: 'Internal Server Error', detail: process.env.DEBUG_ERRORS==='1' ? (err.message||String(err)) : undefined, code: err.code });
   });
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`🚀 Backend running on port ${PORT}`);
+});
+
